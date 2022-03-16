@@ -2,15 +2,16 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 class CategoryDataset(Dataset):
-    def __init__(self, sentence_list, label_list, transform):
+    def __init__(self, sentence_list, label_list, transform, category_manager):
         self.sentence_list = []
+        self.label_list = []
         for sentence in sentence_list:
             self.sentence_list.append(transform(sentence))
-        self.label_list = label_list
-        self.transform = transform
+        for label in label_list:
+            self.label_list.append(category_manager.code_to_id('%03d' % int(label)))
 
     def __len__(self):
-        return len(self.id_list)
+        return len(self.sentence_list)
 
     def __getitem__(self, idx):
         return self.sentence_list[idx], self.label_list[idx]
@@ -44,16 +45,16 @@ def read_txt_file(filename):
     return sentence_list, label_list
 
 
-def get_category_dataloader(batch_size, train_portion=0.7, shuffle=True, transform=None, filename='data/1. 실습용자료.txt', num_workers = 2):
+def get_category_dataloader(batch_size, category_manager, transform, train_portion=0.7, shuffle=True, filename='data/1. 실습용자료.txt'): #, num_workers = 2):
     sentence_list, label_list = read_txt_file(filename)
-    category_dataset = CategoryDataset(sentence_list, label_list, transform)
+    category_dataset = CategoryDataset(sentence_list, label_list, transform, category_manager)
 
     dataset_size = len(category_dataset)
     train_size = (int)(train_portion * dataset_size)
     train_set, val_set = torch.utils.data.random_split(category_dataset, [train_size, dataset_size - train_size])
 
-    trainDataLoader = DataLoader(train_set, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
-    validDataLoader = DataLoader(val_set, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    trainDataLoader = DataLoader(train_set, batch_size=batch_size, shuffle=shuffle)#, num_workers=num_workers)
+    validDataLoader = DataLoader(val_set, batch_size=batch_size, shuffle=shuffle)#, num_workers=num_workers)
 
     return trainDataLoader, validDataLoader
 

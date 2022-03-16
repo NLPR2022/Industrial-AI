@@ -12,14 +12,20 @@ from transformers.optimization import get_cosine_schedule_with_warmup
 
 import pandas as pd
 
+from src.data.category_manager import CategoryManager
 from src.data.data import *
 from src.config import *
-
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 # GPU 사용
 device = torch.device(device)
 txt_file = 'data/1. 실습용자료.txt'
 sentence_list, label_list = read_txt_file(txt_file)
 train_dataset = []
+
+category_manager = CategoryManager.new_category_manager(category_file)
+
 for sen, label in zip(sentence_list, label_list):
     data_train = []
     data_train.append(sen)
@@ -53,16 +59,14 @@ max_grad_norm = 1
 log_interval = 200
 learning_rate = 4e-5
 
-# BERT 모델, Vocabulary 불러오기
 bertmodel, vocab = get_pytorch_kobert_model()
-
-# 토큰화
 tokenizer = get_tokenizer()
-tok = nlp.data.BERTSPTokenizer(tokenizer, vocab, lower=False)
+bert_tokenizer = nlp.data.BERTSPTokenizer(tokenizer, vocab, lower=False)
+transform = nlp.data.BERTSentenceTransform(bert_tokenizer, max_seq_length=max_len, pad=True, pair=False)
 
-data_train = BERTDataset(train_dataset, 0, 1, tok, max_len, True, False)
+train_dataloader, test_dataloader = get_category_dataloader(batch_size, category_manager, transform)
 
-train_dataloader = torch.utils.data.DataLoader(data_train, batch_size=batch_size, num_workers=2)
+# train_dataloader = torch.utils.data.DataLoader(data_train, batch_size=batch_size) #, num_workers=2)
 
 
 class BERTClassifier(nn.Module):
@@ -97,7 +101,7 @@ class BERTClassifier(nn.Module):
 
 
 # BERT 모델 불러오기
-model = BERTClassifier(bertmodel, dr_rate=0.4).to(device)
+model = BERTClassifier(bertmodel,num_classes=category_manager.small_category_num, dr_rate=0.4).to(device)
 
 # optimizer와 schedule 설정
 no_decay = ['bias', 'LayerNorm.weight']
@@ -131,7 +135,7 @@ for e in range(num_epochs):
         token_ids = token_ids.long().to(device)
         segment_ids = segment_ids.long().to(device)
         valid_length = valid_length
-        label = label.long().to(device)
+        label = category_manager.code_to_id(label).long().to(device)
         out = model(token_ids, valid_length, segment_ids)
         loss = loss_fn(out, label)
         loss.backward()
@@ -154,7 +158,7 @@ def predict(sentence):
     dataset_another = [data]
     logits = 0
     another_test = BERTDataset(dataset_another, 0, 1, tok, max_len, True, False)
-    test_dataloader = torch.utils.data.DataLoader(another_test, batch_size=batch_size, num_workers=5)
+    # test_dataloader = torch.utils.data.DataLoader(another_test, batch_size=batch_size) #, num_workers=5)
 
     model.eval()
 

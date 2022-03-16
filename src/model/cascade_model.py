@@ -1,6 +1,13 @@
 import torch
 import torch.nn as nn
 
+class LinearClassifier(nn.Module):
+    def __init__(self, hidden_size, output_size, dropout_rate=None):
+        self.classifier = nn.Linear(hidden_size, output_size)
+        if dropout_rate:
+            self.dropout = nn.Dropout(p=dropout_rate)
+
+
 class CascadeModel(nn.Module):
     def __init__(self,
                  bert,
