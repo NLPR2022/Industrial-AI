@@ -1,15 +1,8 @@
-import torch
 from torch import nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-import gluonnlp as nlp
+from torch.utils.data import Dataset
 import numpy as np
 from tqdm import tqdm, tqdm_notebook
-
-# from kobert_transformers.utils import get_tokenizer
-# from kobert_transformers.load_model import get_kobert_model
-
+import gluonnlp as nlp
 from kobert import get_tokenizer
 from kobert import get_pytorch_kobert_model
 
@@ -19,21 +12,13 @@ from transformers.optimization import get_cosine_schedule_with_warmup
 
 import pandas as pd
 
-# import sys, os
-# sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from src.data import *
+from src.data.data import *
+from src.config import *
 
 # GPU 사용
-device = torch.device("cuda:0")
-
-# bertmodel = get_kobert_model()
-# tokenizer = get_tokenizer()
-# vocab = tokenizer.get_vocab()
-# tok = nlp.data.BERTSPTokenizer(tokenizer, vocab, lower=False)
-# transform = nlp.data.BERTSentenceTransform(tok, vocab=vocab,max_seq_length=100, pad=True, pair=False)
-# train_data = get_category_dataloader(10, bert_tokenizer=transform)
-# train_data = pd.read_csv(path + 'train_data.csv', encoding='utf-8-sig')
-sentence_list, label_list = read_txt_file('data/1. 실습용자료.txt')
+device = torch.device(device)
+txt_file = 'data/1. 실습용자료.txt'
+sentence_list, label_list = read_txt_file(txt_file)
 train_dataset = []
 for sen, label in zip(sentence_list, label_list):
     data_train = []
@@ -141,7 +126,7 @@ for e in range(num_epochs):
     train_acc = 0.0
     # test_acc = 0.0
     model.train()
-    for batch_id, (token_ids, valid_length, segment_ids, label) in enumerate(tqdm_notebook(train_dataloader)):
+    for batch_id, (token_ids, valid_length, segment_ids, label) in enumerate(tqdm(train_dataloader)):
         optimizer.zero_grad()
         token_ids = token_ids.long().to(device)
         segment_ids = segment_ids.long().to(device)
