@@ -1,7 +1,6 @@
 from torch import nn
-from torch.utils.data import Dataset
 import numpy as np
-from tqdm import tqdm, tqdm_notebook
+from tqdm import tqdm
 import gluonnlp as nlp
 from kobert import get_tokenizer
 from kobert import get_pytorch_kobert_model
@@ -63,9 +62,10 @@ bertmodel, vocab = get_pytorch_kobert_model()
 tokenizer = get_tokenizer()
 bert_tokenizer = nlp.data.BERTSPTokenizer(tokenizer, vocab, lower=False)
 transform = nlp.data.BERTSentenceTransform(bert_tokenizer, max_seq_length=max_len, pad=True, pair=False)
-
+#
 train_dataloader, test_dataloader = get_category_dataloader(batch_size, category_manager, transform)
-
+# tok = nlp.data.BERTSPTokenizer(tokenizer, vocab, lower=False)
+# data_train = BERTDataset(train_dataset, 0, 1, tok, max_len, True, False)
 # train_dataloader = torch.utils.data.DataLoader(data_train, batch_size=batch_size) #, num_workers=2)
 
 
@@ -120,9 +120,14 @@ scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=warmup_s
 
 
 # 정확도 측정을 위한 함수 정의
-def calc_accuracy(X, Y):
-    max_vals, max_indices = torch.max(X, 1)
-    train_acc = (max_indices == Y).sum().data.cpu().numpy() / max_indices.size()[0]
+def calc_accuracy(pred, label):
+    max_pred_vals, max_pred_indices = torch.max(pred, 1)
+    max_label_vals, max_label_indices = torch.max(label, 1)
+    count = 0
+    for pred_idx, label_idx in zip(max_pred_indices, max_label_indices):
+        if pred_idx == label_idx:
+            count = count + 1
+    train_acc = count / max_pred_indices.size()[0]
     return train_acc
 
 
@@ -130,12 +135,13 @@ for e in range(num_epochs):
     train_acc = 0.0
     # test_acc = 0.0
     model.train()
-    for batch_id, (token_ids, valid_length, segment_ids, label) in enumerate(tqdm(train_dataloader)):
+    for batch_id, ((token_ids, valid_length, segment_ids), label) in enumerate(tqdm(train_dataloader)):
         optimizer.zero_grad()
         token_ids = token_ids.long().to(device)
         segment_ids = segment_ids.long().to(device)
         valid_length = valid_length
-        label = category_manager.code_to_id(label).long().to(device)
+        # label = category_manager.code_to_one_hot(label).long().to(device)
+        label = label.to(device)
         out = model(token_ids, valid_length, segment_ids)
         loss = loss_fn(out, label)
         loss.backward()

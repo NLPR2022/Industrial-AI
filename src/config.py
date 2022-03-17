@@ -12,3 +12,4 @@ max_grad_norm = 1
 log_interval = 200
 learning_rate = 4e-5
 train_portion = 0.7
+

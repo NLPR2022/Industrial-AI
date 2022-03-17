@@ -3,13 +3,29 @@ from src.data.category_manager import *
 from src.data.tokenizer import *
 from src.config import *
 from src.model.cascade_model import *
+from transformers import AdamW
+from transformers.optimization import get_cosine_schedule_with_warmup
+
 def main():
-    category_manager = CategoryManager.new_category_manager()
-    transformers = get_bert_tokenizer(max_len)
-    train_data, test_data = get_category_dataloader(batch_size=batch_size,train_portion=train_portion,filename=train_txt_file)
-    model = CascadeModel()
-    for epoch in range(num_epochs):
-        model.train(train_data)
+    category_manager = CategoryManager.new_category_manager(category_file)
+    bert = get_bert_tokenizer(max_len)
+    train_dataloader, test_dataloader = get_category_dataloader(batch_size, category_manager, bert, train_portion=0.7, shuffle=True, filename=train_txt_file)
+
+    loss_fn = nn.CrossEntropyLoss()
+    model = CascadeModel(bert, category_manager.big_category_num, category_manager.mid_category_num, category_manager.small_category_num, dr_rate=0.7)
+    # optimizer와 schedule 설정
+    no_decay = ['bias', 'LayerNorm.weight']
+    optimizer_grouped_parameters = [
+        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+         'weight_decay': 0.01},
+        {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+    ]
+    optimizer = AdamW(optimizer_grouped_parameters, lr=learning_rate)
+    t_total = len(train_dataloader) * num_epochs
+    warmup_step = int(t_total * warmup_ratio)
+    scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=warmup_step, num_training_steps=t_total)
+
+    model.train(optimizer, train_dataloader, test_dataloader, num_epochs, device, loss_fn, max_grad_norm, scheduler, log_interval)
 
 if __name__ == '__main__':
     main()

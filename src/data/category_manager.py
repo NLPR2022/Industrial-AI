@@ -114,8 +114,14 @@ class CategoryManager():
     def id_to_code(self, id):
         return self.id_to_code_dict[id]
 
-    def code_to_id(self, code):
+    def code_to_code_id(self, code):
         return self.code_to_id_dict[code]
+
+    def code_to_one_hot(self,code):
+        code_id = self.code_to_code_id(code)
+        one_hot_vector = [0 for _ in range(self.small_category_num)]
+        one_hot_vector[code_id] = 1
+        return one_hot_vector
 
 if __name__ == '__main__':
     category_manager = CategoryManager.new_category_manager('data/한국표준산업분류(10차)_국문.xlsx')

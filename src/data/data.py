@@ -6,15 +6,15 @@ class CategoryDataset(Dataset):
         self.sentence_list = []
         self.label_list = []
         for sentence in sentence_list:
-            self.sentence_list.append(transform(sentence))
+            self.sentence_list.append(transform([sentence]))
         for label in label_list:
-            self.label_list.append(category_manager.code_to_id('%03d' % int(label)))
+            self.label_list.append(category_manager.code_to_one_hot('%03d' % int(label)))
 
     def __len__(self):
         return len(self.sentence_list)
 
     def __getitem__(self, idx):
-        return self.sentence_list[idx], self.label_list[idx]
+        return self.sentence_list[idx], torch.FloatTensor(self.label_list[idx])
 
     @property
     def transform(self):
