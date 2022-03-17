@@ -7,6 +7,7 @@ from transformers import AdamW
 from transformers.optimization import get_cosine_schedule_with_warmup
 
 def main():
+    torch.device(device)
     category_manager = CategoryManager.new_category_manager(category_file)
     bert, transform = get_bert_tokenizer(max_len)
     train_dataloader, test_dataloader = get_category_dataloader(batch_size, category_manager, transform, train_portion=0.7, shuffle=True, filename=train_txt_file)
