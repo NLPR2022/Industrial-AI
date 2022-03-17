@@ -7,4 +7,4 @@ def get_bert_tokenizer(max_len):
     tokenizer = get_tokenizer()
     bert_tokenizer = nlp.data.BERTSPTokenizer(tokenizer, vocab, lower=False)
     transform = nlp.data.BERTSentenceTransform(bert_tokenizer, max_seq_length=max_len, pad=True, pair=False)
-    return transform
+    return bertmodel, transform

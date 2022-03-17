@@ -58,6 +58,10 @@ def get_category_dataloader(batch_size, category_manager, transform, train_porti
 
     return trainDataLoader, validDataLoader
 
+def rawdata_to_sentence(rawdata):
+    words = rawdata.split('|')
+    return words[Index.text_obj_idx] + ' ' + words[Index.text_mthd_idx] + ' ' + words[Index.text_deal_idx]
+
 
 if __name__ == '__main__':
     tr_dataloader, val_dataloader = get_category_dataloader(10)

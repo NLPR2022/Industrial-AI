@@ -4,9 +4,6 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-from src.data.data import rawdata_to_sentence
-
-
 class LinearClassifier(nn.Module):
     def __init__(self, output_size, hidden_size=768, dropout_rate=None):
         super(LinearClassifier, self).__init__()
@@ -16,14 +13,12 @@ class LinearClassifier(nn.Module):
 
 
 class CascadeModel(nn.Module):
-    def __init__(self, bert, big_cate_num, mid_cate_num, small_cate_num, transform, device, dr_rate=None, params=None):
+    def __init__(self, bert, big_cate_num, mid_cate_num, small_cate_num, dr_rate=None, params=None):
         super(CascadeModel, self).__init__()
-        self.bert = bert.to(device)
-        self.device = device
+        self.bert = bert
         self.dr_rate = dr_rate
-        self.transform = transform
-        hidden_size = 768
-        self.classifier = nn.Linear(hidden_size, small_cate_num)# 일단은 이것만 해보겠음
+
+        self.classifier = LinearClassifier(small_cate_num, dropout_rate=dr_rate)# 일단은 이것만 해보겠음
         self.big_classifier = LinearClassifier(big_cate_num, dropout_rate=dr_rate)
         self.mid_classifier = nn.ModuleList([LinearClassifier(mid_cate_num, dropout_rate=dr_rate) for _ in range(big_cate_num)])
         self.small_classifier = nn.ModuleList([LinearClassifier(small_cate_num, dropout_rate=dr_rate) for _ in range(mid_cate_num)])
@@ -46,9 +41,8 @@ class CascadeModel(nn.Module):
             out = self.dropout(pooler)
         return self.classifier(out)
 
-    def train_model(self, optimizer, train_dataloader, test_dataloader, num_epochs, loss_fn, max_grad_norm, scheduler, log_interval):
+    def train(self, optimizer, train_dataloader, test_dataloader, num_epochs, device, loss_fn, max_grad_norm, scheduler, log_interval):
         best_test_acc = 0
-        print(self.inference(rawdata_to_sentence("id_0000006||||철|절삭.용접|카프라배관자재"), self.device))
         for e in range(num_epochs):
             '''
                 Train
@@ -58,10 +52,10 @@ class CascadeModel(nn.Module):
             self.train()
             for batch_id, ((token_ids, valid_length, segment_ids), label) in enumerate(tqdm(train_dataloader)):
                 optimizer.zero_grad()
-                token_ids = token_ids.long().to(self.device)
-                segment_ids = segment_ids.long().to(self.device)
-                valid_length = valid_length.to(self.device)
-                label = label.to(self.device)
+                token_ids = token_ids.long().to(device)
+                segment_ids = segment_ids.long().to(device)
+                valid_length = valid_length
+                label = label.to(device)
                 out = self(token_ids, valid_length, segment_ids)
                 loss = loss_fn(out, label)
                 loss.backward()
@@ -83,10 +77,10 @@ class CascadeModel(nn.Module):
             all_count = 0
             self.eval()
             for batch_id, ((token_ids, valid_length, segment_ids), label) in enumerate(tqdm(test_dataloader)):
-                token_ids = token_ids.long().to(self.device)
-                segment_ids = segment_ids.long().to(self.device)
+                token_ids = token_ids.long().to(device)
+                segment_ids = segment_ids.long().to(device)
                 valid_length = valid_length
-                label = label.to(self.device)
+                label = label.to(device)
                 out = self(token_ids, valid_length, segment_ids)
                 true_positive, all_data = self.count_true_positive(out, label)
                 true_positive_count += true_positive
@@ -116,9 +110,5 @@ class CascadeModel(nn.Module):
             os.mkdir("checkpoint")
         torch.save(self.state_dict(), 'checkpoint/model_epoch_{:03d}_train_acc_{:03d}_test_acc_{:03d}.pth'.format(epoch, train_acc, test_acc))
 
-    def inference(self, sentence, device):
-        (token_ids, valid_length, segment_ids) = self.transform([sentence])
-        token_ids = torch.unsqueeze(torch.from_numpy(token_ids),0).to(device)
-        valid_length = torch.unsqueeze(torch.from_numpy(valid_length),0).to(device)
-        segment_ids = torch.unsqueeze(torch.from_numpy(segment_ids),0).to(device)
-        return torch.argmax(self(token_ids, valid_length, segment_ids))
+    def inference(self, sentence):
+        return self.transform([sentence])
