@@ -13,7 +13,7 @@ def main():
     train_dataloader, test_dataloader = get_category_dataloader(batch_size, category_manager, transform, train_portion=0.7, shuffle=True, filename=train_txt_file)
 
     loss_fn = nn.CrossEntropyLoss()
-    model = CascadeModel(bert, category_manager.big_category_num, category_manager.mid_category_num, category_manager.small_category_num, transform, device, dr_rate=0.7)
+    model = CascadeModel(bert, category_manager.big_category_num, category_manager.mid_category_num, category_manager.small_category_num, transform, device, dr_rate=0.7).to(device)
     # optimizer와 schedule 설정
     no_decay = ['bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
