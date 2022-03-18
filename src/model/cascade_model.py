@@ -46,9 +46,10 @@ class CascadeModel(nn.Module):
             out = self.dropout(pooler)
         return self.classifier(out)
 
-    def train_model(self, optimizer, train_dataloader, test_dataloader, num_epochs, loss_fn, max_grad_norm, scheduler, log_interval):
+    def train_model(self, optimizer, train_dataloader, test_dataloader, num_epochs, loss_fn, max_grad_norm, scheduler, log_interval, history):
         best_test_acc = 0
         print(self.inference(rawdata_to_sentence("id_0000006||||철|절삭.용접|카프라배관자재"), self.device))
+
         for e in range(num_epochs):
             '''
                 Train
@@ -75,7 +76,7 @@ class CascadeModel(nn.Module):
                     train_acc = true_positive_count / all_count
                     print(f"epoch: {e}, batch id: {batch_id}, loss: {loss.data.cpu().numpy()}, train acc: {train_acc}")
             train_acc = true_positive_count / all_count
-
+            print(self.inference(rawdata_to_sentence("id_0000006||||철|절삭.용접|카프라배관자재"), self.device))
             '''
                 Validation
             '''
@@ -93,12 +94,15 @@ class CascadeModel(nn.Module):
                 all_count += all_data
                 if batch_id % log_interval == 0:
                     test_acc = true_positive_count / all_count
-                    print(f"epoch: {e}, batch id: {batch_id}, loss: {loss.data.cpu().numpy()}, train acc: {test_acc}")
-
+                    print(f"epoch: {e}, batch id: {batch_id}, test acc: {test_acc}")
+            self.save_model(e, train_acc, test_acc)
             test_acc = true_positive_count / all_count
             if best_test_acc < test_acc:
                 best_test_acc = test_acc
-                self.save_model(train_acc, test_acc)
+                self.save_model(e, train_acc, test_acc)
+            history.add_history("epoch", e)
+            history.add_history("train_acc", train_acc)
+            history.add_history("test_acc", test_acc)
             print(f"epoch: {e}, train acc: {train_acc}, test acc: {test_acc}")
 
     @staticmethod
@@ -114,7 +118,7 @@ class CascadeModel(nn.Module):
     def save_model(self, epoch, train_acc, test_acc):
         if os.path.exists("checkpoint") == False:
             os.mkdir("checkpoint")
-        torch.save(self.state_dict(), 'checkpoint/model_epoch_{:03d}_train_acc_{:03d}_test_acc_{:03d}.pth'.format(epoch, train_acc, test_acc))
+        torch.save(self.state_dict(), 'checkpoint/model_epoch_{:.3f}_train_acc_{:.3f}_test_acc_{:.3f}.pth'.format(epoch, train_acc, test_acc))
 
     def inference(self, sentence, device):
         (token_ids, valid_length, segment_ids) = self.transform([sentence])

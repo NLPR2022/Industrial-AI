@@ -6,7 +6,15 @@ from src.model.cascade_model import *
 from transformers import AdamW
 from transformers.optimization import get_cosine_schedule_with_warmup
 
+from src.utils.history_manage import ValueHistory
+import datetime
+
+now = datetime.datetime.now()
+nowDate = now.strftime('%Y-%m-%d')
+
 def main():
+    # history는 train 할 때 계산되는 error를 csv파일로 저장하기 위해 만들었다.
+    history = ValueHistory()
     torch.device(device)
     category_manager = CategoryManager.new_category_manager(category_file)
     bert, transform = get_bert_tokenizer(max_len)
@@ -26,8 +34,8 @@ def main():
     warmup_step = int(t_total * warmup_ratio)
     scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=warmup_step, num_training_steps=t_total)
 
-    model.train_model(optimizer, train_dataloader, test_dataloader, num_epochs, loss_fn, max_grad_norm, scheduler, log_interval)
-
+    model.train_model(optimizer, train_dataloader, test_dataloader, num_epochs, loss_fn, max_grad_norm, scheduler, log_interval, history)
+    history.save_csv_all_history(f'train_history_{nowDate}', 'history')
     print(model.inference(rawdata_to_sentence("id_0000006||||철|절삭.용접|카프라배관자재"), device))
     # best model은 아님
     
