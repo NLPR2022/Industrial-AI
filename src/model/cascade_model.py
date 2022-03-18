@@ -121,8 +121,13 @@ class CascadeModel(nn.Module):
         torch.save(self.state_dict(), 'checkpoint/model_epoch_{:.3f}_train_acc_{:.3f}_test_acc_{:.3f}.pth'.format(epoch, train_acc, test_acc))
 
     def inference(self, sentence, device):
+        self.eval()
         (token_ids, valid_length, segment_ids) = self.transform([sentence])
         token_ids = torch.unsqueeze(torch.from_numpy(token_ids),0).to(device)
         valid_length = torch.unsqueeze(torch.from_numpy(valid_length),0).to(device)
         segment_ids = torch.unsqueeze(torch.from_numpy(segment_ids),0).to(device)
-        return torch.argmax(self(token_ids, valid_length, segment_ids))
+        out = self(token_ids, valid_length, segment_ids)
+        return torch.argmax(out)
+
+def load_model(model_file):
+    return torch.load(model_file)
