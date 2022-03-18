@@ -205,6 +205,6 @@ class CategoryManager():
         return one_hot_vector
 
 if __name__ == '__main__':
-    category_manager = CategoryManager.new_category_manager('data/한국표준산업분류(10차)_국문.xlsx')
+    category_manager = CategoryManager.new_category_manager('preprocess/한국표준산업분류(10차)_국문.xlsx')
 
     print('hi')
