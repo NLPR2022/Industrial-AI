@@ -191,7 +191,7 @@ class CategoryManager():
         :param code: (string) 소분류 code
         :return: (int) id
         '''
-        return self.code_to_id_dict[code]
+        return self.code_to_id_dict['{:03d}'.format((int)(code))]
 
     def code_to_one_hot(self,code):
         ''' 소분류 code를 1-hot id로 바꿔줌

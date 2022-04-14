@@ -49,7 +49,7 @@ class CascadeModel(nn.Module):
 
     def train_model(self, optimizer, train_dataloader, test_dataloader, num_epochs, loss_fn, max_grad_norm, scheduler, log_interval, history):
         best_test_acc = 0
-        print(self.inference(rawdata_to_sentence("id_0000006||||철|절삭.용접|카프라배관자재"), self.device))
+        print(self.inference(rawdata_to_sentence("id_0000006||||철|절삭.용접|카프라배관자재")[0], self.device))
 
         for e in range(num_epochs):
             '''
@@ -132,13 +132,18 @@ class CascadeModel(nn.Module):
 
     def inference_by_dataloader(self, test_dataloader):
         out_list = []
+        wrong = 0
         for batch_id, ((token_ids, valid_length, segment_ids), label) in enumerate(tqdm(test_dataloader)):
             token_ids = token_ids.long().to(self.device)
             segment_ids = segment_ids.long().to(self.device)
             valid_length = valid_length
             out = self(token_ids, valid_length, segment_ids)
-            for o in out:
+            for o, l in zip(out, label):
                 out_list.append((int)(torch.argmax(o).data))
+                if (int)(torch.argmax(o).data) != (int)(torch.argmax(l).data):
+                    wrong = wrong + 1
+            # return out_list
+        print(wrong/len(out_list))
         return out_list
 
 def load_model(model_file):

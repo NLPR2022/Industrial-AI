@@ -37,7 +37,7 @@ class CategoryDataset(Dataset):
             if label != '':
                 self.label_list.append(category_manager.code_to_one_hot('%03d' % int(label)))
             else:
-                self.label_list.append('-1')
+                self.label_list.append([0])
 
     def __len__(self):
         return len(self.sentence_list)
@@ -58,6 +58,7 @@ class CategoryDataset(Dataset):
         '''
         category_dataset_pkl_file = f'.cache/CategoryDataset-{pkl_tag}.pkl'
 
+        category_manager = CategoryManager.new_category_manager(category_file)
         if os.path.exists(category_dataset_pkl_file):
             print('load saved category dataset')
             with open(category_dataset_pkl_file, 'rb') as f:
@@ -90,7 +91,7 @@ def rawdata_to_sentence(rawdata):
     :return: 단어1 + 단어2 + 단어3로 만든 문장
     '''
     words = rawdata.split('|')
-    return words[INDEX.TEXT_OBJ_IDX] + ' ' + words[INDEX.TEXT_MTHD_IDX] + ' ' + words[INDEX.TEXT_DEAL_IDX]
+    return words[INDEX.TEXT_OBJ_IDX] + ' ' + words[INDEX.TEXT_MTHD_IDX] + ' ' + words[INDEX.TEXT_DEAL_IDX], words[INDEX.SMALL_IDX]
 
 def read_txt_file(filename):
     ''' txt 파일을 읽어서 단어1 + 단어2 + 단어3로 문장으로 만들고, 소분류를 label로 만드는 함수
@@ -103,7 +104,9 @@ def read_txt_file(filename):
     lines = read_raw_txt_file(filename)
 
     for line in lines:
-        sentence_list.append(rawdata_to_sentence(line))
+        s, l = rawdata_to_sentence(line)
+        sentence_list.append(s)
+        label_list.append(l)
 
     return sentence_list, label_list
 
@@ -138,8 +141,8 @@ def get_category_dataloader(batch_size, category_manager, transform, train_porti
     train_size = (int)(train_portion * dataset_size)
     train_set, val_set = torch.utils.data.random_split(category_dataset, [train_size, dataset_size - train_size])
 
-    trainDataLoader = DataLoader(train_set, batch_size=batch_size, shuffle=shuffle) if len(train_set) != 0 else None
-    validDataLoader = DataLoader(val_set, batch_size=batch_size, shuffle=shuffle) if len(val_set) != 0 else None
+    trainDataLoader = DataLoader(category_dataset, batch_size=batch_size, shuffle=shuffle) if len(train_set) != 0 else None
+    validDataLoader = DataLoader(category_dataset, batch_size=batch_size, shuffle=shuffle) if len(val_set) != 0 else None
 
     return trainDataLoader, validDataLoader
 
